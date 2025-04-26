@@ -1,30 +1,41 @@
-﻿using System.ComponentModel.Composition;
-using System.Windows;
-using System.Windows.Input;
+﻿global using Community.VisualStudio.Toolkit;
+global using Microsoft.VisualStudio.Shell;
+global using System;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
+using System.ComponentModel.Composition;
+using System.Windows;
+using System.Windows.Input;
 
 namespace EasyScroll
 {
-    [Export(typeof(IMouseProcessorProvider))]
+	[ProvideOptionPage(typeof(OptionsProvider.EasyScrollSettingsOptions), "EasyScroll", "General", 0, 0, true, SupportsProfiles = true)]
+	internal sealed class EasyScrollPackage : ToolkitPackage
+	{
+		
+	}
+
+	[Export(typeof(IMouseProcessorProvider))]
 	[Export(typeof(IKeyProcessorProvider))]
 	[ContentType("text")]
-	[TextViewRole(PredefinedTextViewRoles.Interactive)]
+	[TextViewRole(PredefinedTextViewRoles.Editable)]
 	[Name("EasyScroll")]
 	internal class EasyScrollProcessorProvider : IMouseProcessorProvider, IKeyProcessorProvider
 	{
-        public KeyProcessor GetAssociatedProcessor(IWpfTextView wpfTextView)
+		public KeyProcessor GetAssociatedProcessor(IWpfTextView wpfTextView)
         {
             return new EasyScrollKeyProcessor(wpfTextView);
         }
 
-        IMouseProcessor IMouseProcessorProvider.GetAssociatedProcessor(IWpfTextView wpfTextView)
+		IMouseProcessor IMouseProcessorProvider.GetAssociatedProcessor(IWpfTextView wpfTextView)
 		{
 			return new EasyScrollMouseProcessor(wpfTextView);
 		}
 	}
 
-    internal class EasyScrollKeyProcessor : KeyProcessor
+
+	// Key processor
+	internal class EasyScrollKeyProcessor : KeyProcessor
     {
 		private static KeyboardDevice Device;
 
@@ -43,7 +54,9 @@ namespace EasyScroll
         }
     }
 
-    internal class EasyScrollMouseProcessor : MouseProcessorBase
+
+	// Mouse processor
+	internal class EasyScrollMouseProcessor : MouseProcessorBase
 	{
 		public static bool IsShiftPressed = false;
 
@@ -52,12 +65,11 @@ namespace EasyScroll
 		private Point LastMousePoint;
 		private bool IsScrolling = false;
 
-		internal EasyScrollMouseProcessor(IWpfTextView wpfTextView)
-		{
+		internal EasyScrollMouseProcessor(IWpfTextView wpfTextView) {
 			WpfTextView = wpfTextView;
 		}
 
-		public override void PreprocessMouseDown(MouseButtonEventArgs args)
+        public override void PreprocessMouseDown(MouseButtonEventArgs args)
         {
             if (args.ChangedButton == MouseButton.Middle)
 			{
@@ -90,17 +102,22 @@ namespace EasyScroll
 			IsScrolling = true;
 
             Point currentMousePoint = args.GetPosition(null);
+			double scrollRate = EasyScrollSettings.Instance.ScrollRate;
+			double zoomLevel = WpfTextView.ZoomLevel / 100.0;
 
-			double verticalDist = currentMousePoint.Y - LastMousePoint.Y;
-			double verticalDistScaled = verticalDist / WpfTextView.ZoomLevel * 100.0;
-			WpfTextView.ViewScroller.ScrollViewportVerticallyByPixels(verticalDistScaled);
 
-			if (EasyScrollKeyProcessor.GetIsShiftKeyPressed())
-            {
-				double horizontalDist = LastMousePoint.X - currentMousePoint.X;
-				double horizontalDistScaled = horizontalDist / WpfTextView.ZoomLevel * 100.0;
-				WpfTextView.ViewScroller.ScrollViewportHorizontallyByPixels(horizontalDistScaled);
-            }
+			// Vertical scroll
+			double scrolLDistY = (currentMousePoint.Y - LastMousePoint.Y) / zoomLevel * scrollRate;
+			WpfTextView.ViewScroller.ScrollViewportVerticallyByPixels(scrolLDistY);
+
+
+			// Horizontal scroll if any
+			if (EasyScrollKeyProcessor.GetIsShiftKeyPressed() || EasyScrollSettings.Instance.EasyScrollMode == EasyScrollMode.BothWays)
+			{
+				double scrollDistX = (LastMousePoint.X - currentMousePoint.X) / zoomLevel * scrollRate;
+				WpfTextView.ViewScroller.ScrollViewportHorizontallyByPixels(scrollDistX);
+			}
+
 
 			LastMousePoint = currentMousePoint;
 			args.Handled = true;
