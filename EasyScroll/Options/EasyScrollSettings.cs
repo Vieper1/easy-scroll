@@ -25,7 +25,7 @@ namespace EasyScroll
         [DefaultValue(EasyScrollMode.VerticalOnly)]
         public EasyScrollMode EasyScrollMode { get; set; } = EasyScrollMode.VerticalOnly;
 
-		private double scrollRate;
+		private double scrollRate = 1.0;
 		[Category("General")]
         [DisplayName("Scroll Rate")]
         [Description("Choose how much to scroll")]

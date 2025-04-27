@@ -58,8 +58,6 @@ namespace EasyScroll
 	// Mouse processor
 	internal class EasyScrollMouseProcessor : MouseProcessorBase
 	{
-		public static bool IsShiftPressed = false;
-
 		private readonly IWpfTextView WpfTextView;
 
 		private Point LastMousePoint;
